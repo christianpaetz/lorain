@@ -1,14 +1,10 @@
-#define OTAA_BAND     (RAK_REGION_EU868)
-#define OTAA_PERIOD   (20000)
-#define FPORT           2
-#define LORAWAN_BUFSIZE 50 
-
 #define PIN_REED    0x00
 #define PIN_BUTTON  0x01
 #define PIN_LEDR    0x0A
 #define PIN_LEDG    0x09
 #define PIN_NTC     PB3
 #define PIN_NTC_VCC PB5
+#define PIN_VOLTAGE PB4
 
 #define LED_ON  HIGH
 #define LED_OFF LOW
@@ -21,8 +17,7 @@
 #define DEFAULT_HEAVYRAIN 120 // 1 flip every 120 s => 30 f/h = 15 l/h
  
 bool                isLoRaWAN     =  false;
-uint32_t            lBufPtr;
-uint8_t             lBuf[LORAWAN_BUFSIZE];
+const char          compileDate[] = __DATE__ " " __TIME__;
 const uint8_t       hwVersion = 0x05;
 bool                heavyRain = false;
 volatile uint16_t   flipCount = 0;
@@ -36,10 +31,34 @@ uint32_t            configs[CONFIGSIZE];
 int                 heartbeat = 0;
 bool                rx_done = false;
 
+int switchMode(SERIAL_PORT port, char *cmd, stParam *param) {
+  if (param->argc == 1) {     
+    uint32_t mode = strtoul(param->argv[0],NULL,10);
+    configs[7] = mode?0:1;
+    writeConfigFlash();
+    Serial.printf("Switch over to %s-Mode\n",mode?"LoRaWAN":"P2P");
+    api.lorawan.nwm.set(mode); 
+    writeConfigFlash();
+  } else {
+  return AT_PARAM_ERROR;
+  }
+  return AT_OK;
+}
+
 int defaultReset(SERIAL_PORT port, char *cmd, stParam *param) {
   Serial.println("Reset to Default");
   api.system.restoreDefault();
   return AT_OK;  
+}
+
+int setSerial(SERIAL_PORT port, char *cmd, stParam *param) {
+  if (param->argc == 1) {     
+    configs[6] = strtoul(param->argv[0],NULL,16);
+    Serial.printf("Serial Number is 0x%04x\n",configs[6]);
+  } else {
+    return AT_PARAM_ERROR;
+  }
+  return AT_OK;
 }
 
 int cmdConfig(SERIAL_PORT port, char *cmd, stParam *param) {
@@ -81,12 +100,15 @@ void buttonpress() {
   detachInterrupt(PIN_BUTTON);  
   digitalWrite(PIN_LEDR, LED_ON); 
   Serial.println("button pressed");
-  //if(!api.lorawan.nwm.get()) Serial.printf("Try LoRaWAN again: %s\r\n", api.lorawan.nwm.set(1) ? "Success" : "Fail");
+  delay(1000);
+  if(digitalRead(PIN_BUTTON) == BUTTON_ON && !api.lorawan.nwm.get()) {
+    Serial.printf("Try LoRaWAN again: %s\r\n", api.lorawan.nwm.set(1) ? "Success" : "Fail");
+  }
   if (isLoRaWAN) {
     sendHeartBeat();
     lorawanSend();
   }
-  delay(200);
+  //delay(200);
   digitalWrite(PIN_LEDR, LED_OFF);
   attachInterrupt(PIN_BUTTON, buttonpress, BUTTON_ON);    
 }
@@ -96,9 +118,9 @@ void signal(bool state) {
   digitalWrite(PIN_LEDG, LED_OFF);
   for (int i=0;i<4;i++) {
     digitalWrite(state?PIN_LEDG:PIN_LEDR, LED_ON);
-    api.system.sleep.all(100);
+    api.system.sleep.all(50);
     digitalWrite(state?PIN_LEDG:PIN_LEDR, LED_OFF);
-    api.system.sleep.all(400);
+    api.system.sleep.all(200);
     }  
   digitalWrite(state?PIN_LEDG:PIN_LEDR, LED_OFF);   
   }
@@ -110,15 +132,17 @@ void setup() {
   pinMode(PIN_LEDR, OUTPUT);
   pinMode(PIN_NTC_VCC, OUTPUT); 
   pinMode(PIN_NTC, INPUT);  
-  pinMode(PIN_BUTTON, INPUT);    
+  pinMode(PIN_BUTTON, INPUT);  
+  pinMode(PIN_VOLTAGE, INPUT);    
   pinMode(PIN_REED, INPUT);
-  analogReference(RAK_ADC_MODE_3_0);   
+  //analogReference(RAK_ADC_MODE_3_0);   
   if (api.lorawan.nwm.get()) { // LoRaWAN Mode
     digitalWrite(PIN_LEDG, LED_ON);
     digitalWrite(PIN_LEDR, LED_ON); 
     }
   api.system.atMode.add((char *)"CONFIG", (char *)"Get/Set Config Values", (char *)"CONFIG", cmdConfig, RAK_ATCMD_PERM_WRITE | RAK_ATCMD_PERM_READ); 
-  api.system.atMode.add((char *)"RESET", (char *)"Factory Defaults", (char *)"RESET", defaultReset, RAK_ATCMD_PERM_WRITE | RAK_ATCMD_PERM_READ);                        
+  api.system.atMode.add((char *)"RESET", (char *)"Factory Defaults", (char *)"RESET", defaultReset, RAK_ATCMD_PERM_WRITE | RAK_ATCMD_PERM_READ); 
+  api.system.atMode.add((char *)"MODE", (char *)"Changes Lora Mode", (char *)"MODE", switchMode, RAK_ATCMD_PERM_WRITE | RAK_ATCMD_PERM_READ);                         
   delay(3000); // emergency stop to input boot mode command
   readConfigFlash(); 
   loraSetup();
@@ -129,13 +153,14 @@ void setup() {
 
 void loop() {
   uint32_t diff = millis()/1000 - lastFlip;
+  Serial.printf("Wakeup: time=%d flips=%d, count=%d,last=%d reed %d\n",millis()/1000,flipCount,heartbeat,lastFlip,digitalRead(PIN_REED));
   digitalWrite(PIN_NTC_VCC, HIGH); 
   delay(5);
   int ntc = analogRead(PIN_NTC);
-  float r_ntc = 100000.0 * (1023.0 - ntc) / (ntc-1); // R7 is 100 kOhm    
+  float r_ntc = 2*100000.0 * (1023.0 - ntc) / (ntc-1); // R7 is 100 kOhm    
   temperature = (1.0 / ((log(r_ntc/100000.0)/4485) + (1/298.15))) - 273.15; // NTCG164KF104FT1: b=4485/ r=100KO  
-  voltage = 150;
-  Serial.printf("NTC: r = %d Ohm, t = %.1f C Batt = %d mV\r\n", (int)r_ntc, temperature, voltage*20);
+  voltage = analogRead(PIN_VOLTAGE)/10*75;
+  Serial.printf("NTC: r = %d Ohm, t = %.1f C Batt = %d mV\r\n", (int)r_ntc, temperature, voltage);
   digitalWrite(PIN_NTC_VCC, LOW);    
   uAs += configs[4] * 6/100; // * 0,1 mAs;
   if (++heartbeat >= configs[2] || flipCount || (heavyRain && diff > configs[3])) {
@@ -211,9 +236,69 @@ bool readLoraKeys() {
   return error;
 }
 
+
+// #####
+// Lora Part
+// #####
+#define OTAA_BAND     (RAK_REGION_EU868)
+#define OTAA_PERIOD   (20000)
+#define FPORT           2
+#define LORAWAN_BUFSIZE 50 
+
+#define P2P_FREQUENCY   869525000
+#define P2P_SF          12
+#define P2P_BW          125
+#define P2P_CR          1
+#define P2P_TXPWR       22
+#define P2P_PREAMPLE    8
+
+#define BUILD_MONTH_IS_JAN (__DATE__[0] == 'J' && __DATE__[1] == 'a' && __DATE__[2] == 'n')
+#define BUILD_MONTH_IS_FEB (__DATE__[0] == 'F')
+#define BUILD_MONTH_IS_MAR (__DATE__[0] == 'M' && __DATE__[1] == 'a' && __DATE__[2] == 'r')
+#define BUILD_MONTH_IS_APR (__DATE__[0] == 'A' && __DATE__[1] == 'p')
+#define BUILD_MONTH_IS_MAY (__DATE__[0] == 'M' && __DATE__[1] == 'a' && __DATE__[2] == 'y')
+#define BUILD_MONTH_IS_JUN (__DATE__[0] == 'J' && __DATE__[1] == 'u' && __DATE__[2] == 'n')
+#define BUILD_MONTH_IS_JUL (__DATE__[0] == 'J' && __DATE__[1] == 'u' && __DATE__[2] == 'l')
+#define BUILD_MONTH_IS_AUG (__DATE__[0] == 'A' && __DATE__[1] == 'u')
+#define BUILD_MONTH_IS_SEP (__DATE__[0] == 'S')
+#define BUILD_MONTH_IS_OCT (__DATE__[0] == 'O')
+#define BUILD_MONTH_IS_NOV (__DATE__[0] == 'N')
+#define BUILD_MONTH_IS_DEC (__DATE__[0] == 'D')
+
+#define COMPUTE_BUILD_MONTH \
+    ( \
+        (BUILD_MONTH_IS_JAN) ?  1 : \
+        (BUILD_MONTH_IS_FEB) ?  2 : \
+        (BUILD_MONTH_IS_MAR) ?  3 : \
+        (BUILD_MONTH_IS_APR) ?  4 : \
+        (BUILD_MONTH_IS_MAY) ?  5 : \
+        (BUILD_MONTH_IS_JUN) ?  6 : \
+        (BUILD_MONTH_IS_JUL) ?  7 : \
+        (BUILD_MONTH_IS_AUG) ?  8 : \
+        (BUILD_MONTH_IS_SEP) ?  9 : \
+        (BUILD_MONTH_IS_OCT) ? 10 : \
+        (BUILD_MONTH_IS_NOV) ? 11 : \
+        (BUILD_MONTH_IS_DEC) ? 12 : \
+        /* error default */  99 \
+    )
+    
+uint8_t         ubitxbuffer[25];
+int             joinbackoff=10;
+uint32_t        lBufPtr;
+uint8_t         lBuf[LORAWAN_BUFSIZE];
+
+
+//######################################################################
+// Setup
+//######################################################################
+
 void        loraSetup() {
   uint8_t retcode=0;
   lBufPtr = 0; 
+  if (api.lorawan.nwm.get()==0 && (configs[7] & 0x01) == 0) 
+     Serial.printf("Set Node device work mode to LoRaWAN %s\r\n", api.lorawan.nwm.set(1) ? "Success" : "Fail");
+  if (api.lorawan.nwm.get() == 1) {
+    Serial.printf("Start LoRaWAN Mode\n");
     readLoraKeys();  // fills appkey,deveui,appeui
     api.lorawan.band.set(OTAA_BAND);
     api.lorawan.registerJoinCallback(joinCallback);
@@ -222,21 +307,22 @@ void        loraSetup() {
     retcode = api.lorawan.njs.get();
     api.lorawan.join();
     while(!isLoRaWAN && retcode == 0 && millis() < 20000) {
-      delay(2000);
+      delay(1000);
       retcode = api.lorawan.njs.get();
     };  
-    if(retcode == 0) { 
+    if(retcode == 0) { // will reboot !!!!
+      configs[7] |= 1;      
       signal(false);
-      api.system.sleep.all(24*60*60 * 1000);
-      return; 
+//      api.system.sleep.all(24*60*60 * 1000);
+      writeConfigFlash();
+      Serial.printf("No LoRaWAN,Switch over to Ubilink\n");
+      api.lorawan.nwm.set(0);
+      return; //never reached
     }
     else
        signal(true);   
+  }
 }
-
-//######################################################################
-// LoRaWAN CB, send 
-//######################################################################
 
 void        lorawanSend() {
   if (lBufPtr==0) return;
@@ -283,6 +369,11 @@ void        joinCallback(int32_t status) {
   }  
 }
 
+
+//######################################################################
+// ASAP  
+//######################################################################
+
 void        processCmd(uint8_t * buf, int buflen) {
   int cidx=0;
   int bcmd;
@@ -313,7 +404,7 @@ void        sendHwID() {
   }
 
 void        sendFwID() { 
-  uint32_t fwVersion = 0x00000001; 
+  uint32_t fwVersion = getFWVersion(); 
   loraAddByteToBuffer(0x0A);
   loraAddWordToBuffer(fwVersion >> 16);
   loraAddWordToBuffer(fwVersion & 0xffff);
@@ -323,10 +414,15 @@ void        sendHeavyRainAlarm(bool state,uint32_t val) {
   loraAddByteToBuffer(0x0b);
   loraAddByteToBuffer(state);  
   loraAddByteToBuffer(0x03);    
-  loraAddWordToBuffer(1800/(val/1000));
-  if(isLoRaWAN) {api.lorawan.cfm.set(true);lorawanSend();}
+  loraAddWordToBuffer(val/1000);
+  if(isLoRaWAN) {api.lorawan.cfm.set(true);lorawanSend();} 
   }
- 
+
+uint32_t    getFWVersion() {
+    String cs(__DATE__);
+    return cs.substring(9,11).toInt()*10000+COMPUTE_BUILD_MONTH*100+cs.substring(4,6).toInt();  
+}
+
 bool        loraAddByteToBuffer(byte x) {
   if (lBufPtr == LORAWAN_BUFSIZE) return false;
   lBuf[lBufPtr]=x;
