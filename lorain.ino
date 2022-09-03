@@ -15,6 +15,10 @@
 #define DEFAULT_INTERVAL  900 // 15 min
 #define DEFAULT_HEARTBEAT 4 // 1h
 #define DEFAULT_HEAVYRAIN 120 // 1 flip every 120 s => 30 f/h = 15 l/h
+
+#define OTAA_DEVEUI   {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08}
+#define OTAA_APPEUI   {0x0E, 0x0D, 0x0D, 0x01, 0x0E, 0x01, 0x02, 0x0E}
+#define OTAA_APPKEY   {0x2B, 0x7E, 0x15, 0x16, 0x28, 0xAE, 0xD2, 0xA6, 0xAB, 0xF7, 0x15, 0x88, 0x09, 0xCF, 0x4F, 0x3E}
  
 bool                isLoRaWAN     =  false;
 const char          compileDate[] = __DATE__ " " __TIME__;
@@ -220,20 +224,17 @@ void writeConfigFlash() {
   bool error= api.system.flash.set(0,(uint8_t *)configs,CONFIGSIZE*sizeof(uint32_t));
 }
 
-bool readLoraKeys() {
-  uint8_t b[32];
-  bool error =  api.system.flash.get(64,(uint8_t *)b,32);
-  Serial.printf("AppEUI %02X %02X %02X %02X %02X %02X %02X %02X\n",
-    b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7]);  
-  Serial.printf("DevEUI %02X %02X %02X %02X %02X %02X %02X %02X\n",
-    b[8], b[9], b[10], b[11], b[12], b[13], b[14], b[15]); 
-  Serial.printf("AppKey %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X\n",
-    b[16], b[17], b[18], b[19], b[20], b[21], b[22], b[23],
-    b[24], b[25], b[26], b[27], b[28], b[29], b[30], b[31]);         
-  error += api.lorawan.appeui.set(b, 8);  
-  error += api.lorawan.deui.set(&(b[8]), 8);
-  error += api.lorawan.appkey.set(&(b[16]), 16); 
-  return error;
+void readLoraKeys() {
+  // OTAA Device EUI MSB first
+  uint8_t node_device_eui[8] = OTAA_DEVEUI;
+  // OTAA Application EUI MSB first
+  uint8_t node_app_eui[8] = OTAA_APPEUI;
+  // OTAA Application Key MSB first
+  uint8_t node_app_key[16] = OTAA_APPKEY;
+          
+  api.lorawan.appeui.set(node_app_eui, 8);  
+  api.lorawan.deui.set(node_device_eui, 8);
+  api.lorawan.appkey.set(node_app_key, 16); 
 }
 
 
