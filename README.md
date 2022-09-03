@@ -1,6 +1,6 @@
-<h1> Lora Rain Sensor <h1>
+<h1> Lora Rain Sensor </h1>
 
-<p>Lorain is an affordable LoraWAN rain sensor utilizing the RAK 3172 Lora Module that can be programmed using Arduino environment. </b>
+<p>Lorain is an affordable LoraWAN rain sensor utilizing the RAK 3172 Lora Module that can be programmed using Arduino environment. </p>
 
   
 <h2> Hardware</h2>
@@ -34,12 +34,12 @@ The kit includes a PCBA almost fully populated</li>
 <li>Connect the Battery + contact if the PCBA to the battery + contact of the battery compartment using the red wires</li>
 <li>Connect the Battery - contact if the PCBA to the battery contact of the battery compartment using the black wires</li>
 <li>Insert the button into the hole of the PCB and solder it on the four pins</li>
-<li>Solder the reed contact on the B- side as shown on the silk screen</li>
+<li>Solder the reed contact on the B-side as shown on the silk screen</li>
 <li>Solder the whip antenna to the antenna tru-hole</li>
 </ul> 
 
 <h2> Firmware </h2>
   
-<p> The firmware is written as Arduino Sketch using the RAK Wireless Arduino Environment </p>. You need to install the Arduino IDE and follow the instructions of <a href="https://docs.rakwireless.com/Product-Categories/WisDuo/RAK3172-Module/Quickstart/#rak3172-as-a-stand-alone-device-using-rui3"> RAK wireless </a> to install the RAK board support package. </p>
+<p>The firmware is written as Arduino Sketch using the RAK Wireless Arduino Environment </p>. You need to install the Arduino IDE and follow the instructions of <a href="https://docs.rakwireless.com/Product-Categories/WisDuo/RAK3172-Module/Quickstart/#rak3172-as-a-stand-alone-device-using-rui3"> RAK wireless </a> to install the RAK board support package. </p>
   
-<p> To flash a new firmware you need a simple USB-TTL-UART connector (<a href="https://www.amazon.de/AZDelivery-Konverter-kompatibel-Arduino-inklusive/dp/B089QJZ51Z/ref=asc_df_B089QJZ51Z"> e.g. this </a>). The firmware update mode on the RAK module is enabled using the AT command 'AT+BOOT' on the serial console of the Arduino IDE. </p>
+<p>To flash a new firmware you need a simple USB-TTL-UART connector (<a href="https://www.amazon.de/AZDelivery-Konverter-kompatibel-Arduino-inklusive/dp/B089QJZ51Z/ref=asc_df_B089QJZ51Z"> e.g. this </a>). The firmware update mode on the RAK module is enabled using the AT command 'AT+BOOT' on the serial console of the Arduino IDE. </p>
