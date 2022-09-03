@@ -10,7 +10,7 @@
 <li>Complete product tested and ready to use</li>
 <li>Kit with all needed components and need to solder some of the components and flash the firmware. 
 The kit includes a PCBA almost fully populated</li>
-<li>The plain enclosure of the device. You need to order the PCB / PCBA, purchase and solder all components and flash the firmware. The How to below assumes this option.</li>
+<li>The plain enclosure of the device. You need to order the PCB / PCBA, purchase and solder all components and flash the firmware. The 'How-To' below assumes this option.</li>
 </ul>
 <p> The folder /hardware contains the gerber data and Bill of material of the PCBs. You can order the PCB from one of the usual suspects for fast and cheap PCB manufacturing like jlcpcb or pcbway. Ordering own PCB and soldering all components requires a certain level of hardware knowledge and soldering skills. Hence, we don’t provide additional guidance beside offering the files for the PCB.
 </p>
