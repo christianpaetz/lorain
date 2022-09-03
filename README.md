@@ -5,7 +5,7 @@
   
 <h2> Hardware</h2>
 
-<p>There are multiple ways to acquire the hardware for the LoRain. The Aqua-Scope Webshop at shop.aqua-scope.com offers different options depending on your willingness to spent own effort:
+<p>There are multiple ways to acquire the hardware for the LoRain. The Aqua-Scope Webshop at <a href="https://shop.aqua-scope.com">shop.aqua-scope.com</a> offers different options depending on your willingness to spent own effort in exchange for money:
 <ul>
 <li>Complete product tested and ready to use</li>
 <li>Kit with all needed components and need to solder some of the components and flash the firmware. 
@@ -40,6 +40,6 @@ The kit includes a PCBA almost fully populated</li>
 
 <h2> Firmware </h2>
   
-<p>The firmware is written as Arduino Sketch using the RAK Wireless Arduino Environment </p>. You need to install the Arduino IDE and follow the instructions of <a href="https://docs.rakwireless.com/Product-Categories/WisDuo/RAK3172-Module/Quickstart/#rak3172-as-a-stand-alone-device-using-rui3"> RAK wireless </a> to install the RAK board support package. </p>
+<p>The firmware is written as Arduino Sketch using the RAK Wireless Arduino Environment. You need to install the Arduino IDE and follow the instructions of <a href="https://docs.rakwireless.com/Product-Categories/WisDuo/RAK3172-Module/Quickstart/#rak3172-as-a-stand-alone-device-using-rui3"> RAK wireless </a> to install the RAK board support package. </p>
   
 <p>To flash a new firmware you need a simple USB-TTL-UART connector (<a href="https://www.amazon.de/AZDelivery-Konverter-kompatibel-Arduino-inklusive/dp/B089QJZ51Z/ref=asc_df_B089QJZ51Z"> e.g. this </a>). The firmware update mode on the RAK module is enabled using the AT command 'AT+BOOT' on the serial console of the Arduino IDE. </p>
