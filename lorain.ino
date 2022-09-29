@@ -162,8 +162,8 @@ void loop() {
   delay(5);
   int ntc = analogRead(PIN_NTC);
   float r_ntc = 2*100000.0 * (1023.0 - ntc) / (ntc-1); // R7 is 100 kOhm    
-  temperature = (1.0 / ((log(r_ntc/100000.0)/4485) + (1/298.15))) - 273.15; // NTCG164KF104FT1: b=4485/ r=100KO  
-  voltage = analogRead(PIN_VOLTAGE)/10*75;
+  temperature = (1.0 / ((log(r_ntc/(configs[5]*1000.0)/4485) + (1/298.15))) - 273.15; // NTCG164KF104FT1: b=4485/ r=100KO  
+  voltage = analogRead(PIN_VOLTAGE)/10*75/100;
   Serial.printf("NTC: r = %d Ohm, t = %.1f C Batt = %d mV\r\n", (int)r_ntc, temperature, voltage);
   digitalWrite(PIN_NTC_VCC, LOW);    
   uAs += configs[4] * 6/100; // * 0,1 mAs;
@@ -211,7 +211,7 @@ bool readConfigFlash() {
     configs[2] = DEFAULT_HEARTBEAT;             // heartbeats as multiple of reports (default 4 = 1h,alternative 96 =1 d)
     configs[3] = DEFAULT_HEAVYRAIN;             // 1 flip every 120 s => 30 f/h = 15 l/h
     configs[4] = DEFAULT_INTERVAL;              // regular reporting in seconds (default 900 = 15 min)
-    configs[5] = 0;            // spare     
+    configs[5] = 100;                           // calibration of ntc     
     configs[6] = 0;            // id  
     configs[7] = 0;            // status         
     writeConfigFlash();
