@@ -159,12 +159,11 @@ void loop() {
   uint32_t diff = millis()/1000 - lastFlip;
   Serial.printf("Wakeup: time=%d flips=%d, count=%d,last=%d reed %d\n",millis()/1000,flipCount,heartbeat,lastFlip,digitalRead(PIN_REED));
   digitalWrite(PIN_NTC_VCC, HIGH); 
-  delay(5);
-  int ntc = analogRead(PIN_NTC);
-  float r_ntc = 2*100000.0 * (1023.0 - ntc) / (ntc-1); // R7 is 100 kOhm    
-  temperature = (1.0 / ((log(r_ntc/(configs[5]*1000.0)/4485) + (1/298.15))) - 273.15; // NTCG164KF104FT1: b=4485/ r=100KO  
+  delay(200);
+  float r_ntc = (float)(configs[5] * 1000) * (1023.0/((float)analogRead(PIN_NTC))-1.0); // R7 is 100 kOhm    
+  temperature  = (1 / ((log(r_ntc / 100000.0) / 4485.0) + (1.0 / (25.0 + 273.15))))- 273.15; 
+  // NTCG164KF104FT1: b=4485/ r=100KOhm @ 25 Degree  
   voltage = analogRead(PIN_VOLTAGE)/10*75/100;
-  Serial.printf("NTC: r = %d Ohm, t = %.1f C Batt = %d mV\r\n", (int)r_ntc, temperature, voltage);
   digitalWrite(PIN_NTC_VCC, LOW);    
   uAs += configs[4] * 6/100; // * 0,1 mAs;
   if (++heartbeat >= configs[2] || flipCount || (heavyRain && diff > configs[3])) {
@@ -196,7 +195,7 @@ void sendHeartBeat( ) {
   loraAddTwoByteToBuffer(0x06, 0x03); // Uptime
   loraAddWordToBuffer(millis()/1000/60/60/24);     
   loraAddTwoByteToBuffer(0x06, 0x01); // Temperature
-  loraAddWordToBuffer((int16_t)(temperature)); 
+  loraAddWordToBuffer((int16_t)(temperature*10)); 
   loraAddTwoByteToBuffer(0x06, 0x81); // rain
   loraAddWordToBuffer(flipCount); // count = 500 ml
   loraAddTwoByteToBuffer(0x12, voltage); // Battery
