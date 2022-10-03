@@ -1,1 +1,0 @@
-looking for somebody willing to draw 3d model of the enclosure or even improve it.
